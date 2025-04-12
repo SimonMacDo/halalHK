@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halal Restaurants - Hong Kong</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+tailwind.config = {
+theme: {
+extend: {
+colors: {
+primary: '#5D5CDE',
+}
+}
+},
+darkMode: 'class'
+}
+</script>
+<style>
+.placeholder-image {
+display: flex;
+align-items: center;
+justify-content: center;
+font-weight: bold;
+color: white;
+border-radius: 0.5rem;
+width: 100%;
+height: 100%;
+min-height: 90px;
+}
+
+/* Map container */
+#map-container {
+height: 600px;
+width: 100%;
+border-radius: 0.5rem;
+transition: opacity 0.3s ease-in-out;
+}
+
+/* View toggle button styles */
+.view-toggle-btn {
+transition: all 0.2s ease;
+}
+
+.view-toggle-btn.active {
+background-color: #5D5CDE;
+color: white;
+}
+
+/* Animations for smooth transitions */
+.fade-in {
+opacity: 0;
+animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+0% { opacity: 0; }
+100% { opacity: 1; }
+}
+
+/* Custom map popup styles */
+.leaflet-popup-content-wrapper {
+border-radius: 8px;
+padding: 0;
+overflow: hidden;
+}
+
+.leaflet-popup-content {
+margin: 0;
+padding: 0;
+width: 280px !important;
+}
+
+.map-popup {
+padding: 12px;
+}
+
+.map-popup-header {
+color: #5D5CDE;
+font-weight: bold;
+margin-bottom: 5px;
+}
+
+/* Customize leaflet controls for dark mode */
+.dark .leaflet-control-zoom a {
+background-color: #374151;
+color: #e5e7eb;
+border-color: #4b5563;
+}
+
+.restaurant-card {
+transition: all 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+#map-container {
+height: 400px;
+}
+}
+</style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-200">
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+<h1 class="text-3xl font-bold text-center mb-6 text-primary dark:text-primary">Halal Restaurants - Hong Kong</h1>
+
+<!-- View Toggle Buttons -->
+<div class="flex justify-center mb-6">
+<div class="inline-flex rounded-md shadow-sm" role="group">
+<button id="list-view-btn" class="view-toggle-btn active px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-l-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+</svg>
+List View
+</button>
+<button id="map-view-btn" class="view-toggle-btn px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-r-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+</svg>
+Map View
+</button>
+</div>
+</div>
+
+<div class="mb-8 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow">
+<div class="flex flex-col md:flex-row gap-4 mb-4">
+<div class="w-full md:w-1/3">
+<label for="region-filter" class="block text-sm font-medium mb-1">Filter by Region</label>
+<select id="region-filter" class="w-full p-2 border rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base">
+<option value="">All Regions</option>
+<option value="Hong Kong Island">Hong Kong Island</option>
+<option value="Kowloon">Kowloon</option>
+<option value="New Territories">New Territories</option>
+<option value="Lantau">Lantau</option>
+<option value="Airport">Airport</option>
+<option value="Hotel">Hotel</option>
+<option value="Theme Park">Theme Park</option>
+<option value="Macau">Macau</option>
+</select>
+</div>
+<div class="w-full md:w-1/3">
+<label for="area-filter" class="block text-sm font-medium mb-1">Filter by Area</label>
+<select id="area-filter" class="w-full p-2 border rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base">
+<option value="">All Areas</option>
+</select>
+</div>
+<div class="w-full md:w-1/3">
+<label for="cuisine-filter" class="block text-sm font-medium mb-1">Filter by Cuisine</label>
+<select id="cuisine-filter" class="w-full p-2 border rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base">
+<option value="">All Cuisines</option>
+</select>
+</div>
+</div>
+<div class="flex flex-col md:flex-row gap-4">
+<div class="w-full md:w-1/2">
+<label for="sort-option" class="block text-sm font-medium mb-1">Sort by</label>
+<select id="sort-option" class="w-full p-2 border rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base">
+<option value="name">Name</option>
+<option value="cuisine">Cuisine</option>
+<option value="area">Area</option>
+<option value="region">Region</option>
+<option value="expiry">Expiry Date</option>
+</select>
+</div>
+<div class="w-full md:w-1/2 flex items-end">
+<button id="sort-direction" class="w-full p-2 border rounded-md bg-primary text-white hover:bg-opacity-90 transition-all flex items-center justify-center">
+<span>Ascending</span>
+<svg xmlns="http://www.w3.org/2000/svg" class="ml-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+<path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+</svg>
+</button>
+</div>
+</div>
+</div>
+
+<div id="restaurant-count" class="text-lg font-medium mb-4"></div>
+
+<!-- Map View Container (hidden by default) -->
+<div id="map-container" class="mb-6 hidden"></div>
+
+<!-- List View Container -->
+<div id="restaurant-list" class="space-y-4"></div>
+</div>
+
+<script>
+// Check for dark mode preference
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+document.documentElement.classList.add('dark');
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+if (event.matches) {
+document.documentElement.classList.add('dark');
+} else {
+document.documentElement.classList.remove('dark');
+}
+});
+
+// Function to generate a color based on a string
+function stringToColor(str) {
+let hash = 0;
+for (let i = 0; i < str.length; i++) {
+hash = str.charCodeAt(i) + ((hash << 5) - hash);
+}
+
+const colorBase = [
+'#FF6B6B', '#4ECDC4', '#45B7D1', '#F9C74F', '#6A4C93',
+'#F06595', '#4CAF50', '#FF9800', '#9C27B0', '#3F51B5',
+'#00BCD4', '#8D6E63', '#607D8B', '#795548', '#009688',
+'#EF476F', '#FFD166', '#06D6A0', '#118AB2', '#073B4C'
+];
+
+return colorBase[Math.abs(hash) % colorBase.length];
+}
+
+// Function to get initials from a restaurant name
+function getInitials(name) {
+const words = name.split(/[\s-]+/).filter(word => word.length > 0);
+if (words.length === 1) {
+return words[0].substring(0, 2).toUpperCase();
+} else {
+return (words[0][0] + words[1][0]).toUpperCase();
+}
+}
+
+// Restaurant data
+const restaurants = [
+// Hong Kong Island restaurants
+{
+no: 1,
+name: "27 Kebab House - Central",
+address: "Shop D - E, 27 Hollywood Road, Central.",
+tel: "2795 2727",
+cuisine: "Turkish, Indian & Italian",
+expiryDate: "24-Jan-26",
+region: "Hong Kong Island"
+},
+{
+no: 2,
+name: "27 Kebab House - HKU",
+address: "Portion of 1A/F, Fong Shu Chuen Amenities Centre, Main Campus, The University of Hong Kong.",
+tel: "2527 8877",
+cuisine: "Turkish, Indian & Italian",
+expiryDate: "09-Oct-25",
+region: "Hong Kong Island"
+},
+{
+no: 3,
+name: "Aladin Mess",
+address: "2/F, Fu Hing House, 60 Russell Street, Causeway Bay.",
+tel: "2808 0250",
+cuisine: "Pakistani / Indian",
+expiryDate: "29-Oct-25",
+region: "Hong Kong Island"
+},
+{
+no: 4,
+name: "Ali Baba Kitchen",
+address: "Shop A3, G/F, Block 2, Kam Hoi Mansion, 47 Pan Hoi Street, Quarry Bay.",
+tel: "2808 0250",
+cuisine: "Pakistani / Indian",
+expiryDate: "31-May-25",
+region: "Hong Kong Island"
+},
+{
+no: 5,
+name: "Basmati",
+address: "1/F, 137-139 Connaught Road, Sheung Wan.",
+tel: "2541 0995",
+cuisine: "Indian",
+expiryDate: "08-Sep-25",
+region: "Hong Kong Island"
+},
+{
+no: 6,
+name: "Big Pizza - 89 Lockhart Road",
+address: "Shop 5, G/F, Wanchai Central Building, 89 Lockhart Road, Wan Chai.",
+tel: "2153 3363",
+cuisine: "Italian Mix",
+expiryDate: "06-May-25",
+region: "Hong Kong Island"
+},
+{
+no: 7,
+name: "Bijas Vegetarian Restaurant",
+address: "Catering Outlet D, G/F, Run Run Shaw Tower, Centennial Campus, HKU.",
+tel: "2964 9011",
+cuisine: "Chinese Vegetarian",
+expiryDate: "31-Aug-25",
+region: "Hong Kong Island"
+},
+{
+no: 8,
+name: "BKK PMQ-Staunton",
+address: "SG09-SG14, G/F, Block A, 35 Aberdeen Street, Central",
+tel: "2330 0306",
+cuisine: "Thai",
+expiryDate: "20-Feb-26",
+region: "Hong Kong Island"
+},
+{
+no: 9,
+name: "Bombay Dreams",
+address: "1/F, Winning Centre, 46 Wyndham Street, Central.",
+tel: "2971 0001",
+cuisine: "Indian",
+expiryDate: "08-Sep-25",
+region: "Hong Kong Island"
+},
+{
+no: 10,
+name: "Carat Fine Indian Cuisine - Central",
+address: "Shop A, G/F, 29 D'Aguilar street, Central.",
+tel: "2111 0491",
+cuisine: "Indian",
+expiryDate: "20-Jan-26",
+region: "Hong Kong Island"
+},
+// Kowloon restaurants
+{
+no: 1,
+name: "27 Kebab House",
+address: "Shop 1, G/F, Supreme house, N0.2A, Hart Avenue, Tsim Sha Tsui.",
+tel: "2527 8877",
+cuisine: "Turkish, Indian & Italian",
+expiryDate: "27-Sep-25",
+region: "Kowloon"
+},
+{
+no: 2,
+name: "Anjappar Chettinad Indian Restaurant",
+address: "Unit-202, Multifield Plaza, No.3-5 Prat Avenue, Tsim Sha Tsui.",
+tel: "3428 5757",
+cuisine: "South Indian",
+expiryDate: "31-Jul-25",
+region: "Kowloon"
+},
+{
+no: 3,
+name: "Bushra",
+address: "Shop 6, G/F & Shop 16, UG/F, Tsim Sha Tsui Centre, 66 Mody Road, Tsim Sha Tsui.",
+tel: "2205 6011",
+cuisine: "Middle Eastern",
+expiryDate: "15-Jun-25",
+region: "Kowloon"
+},
+{
+no: 4,
+name: "Carat Fine Indian Cuisine",
+address: "4/F, Winfield Commercial Building, 6-8A Part Avenue, Tsim Sha Tsui.",
+tel: "2391 3929",
+cuisine: "Indian",
+expiryDate: "20-Jan-26",
+region: "Kowloon"
+},
+{
+no: 5,
+name: "Cravings",
+address: "G/F, No.8 Winner Building, 867 - 885 Canton Road, Mong Kok.",
+tel: "9402 6555",
+cuisine: "Indian, Italian & Middle Eastern",
+expiryDate: "31-Jul-25",
+region: "Kowloon"
+},
+{
+no: 6,
+name: "Curry & Kabab Hut",
+address: "G/F (Front Portion), 19 Sung Kit Street, Hung Hom.",
+tel: "2725 0777",
+cuisine: "Turkish & Indian",
+expiryDate: "29-Nov-25",
+region: "Kowloon"
+},
+{
+no: 7,
+name: "Curry Culture",
+address: "5 Minden Avenue, Tsim Sha Tsui",
+tel: "3489 6719",
+cuisine: "Modern Indian",
+expiryDate: "12-Feb-26",
+region: "Kowloon"
+},
+{
+no: 8,
+name: "Curry Leaf Indian Cuisine",
+address: "G/F, M/F, Mau Lam Commercial Building, 16-18 Mau Lam Street, Jordan.",
+tel: "8100 0911",
+cuisine: "Indian",
+expiryDate: "20-Sep-25",
+region: "Kowloon"
+},
+{
+no: 9,
+name: "Dignity Kitchen - Halal Food Stall",
+address: "Shop 201 & 202, 618 Shanghai Street, Mong Kok.",
+tel: "2561 2633",
+cuisine: "Singaporean",
+expiryDate: "13-Feb-26",
+region: "Kowloon"
+},
+{
+no: 10,
+name: "Ebeneezer's Kebab & Pizzeria (CityU)",
+address: "Indoor 5380 Cafe, R5013, 5/F, Amenities Bldg, City University of Hong Kong, Tat Chee Avenue.",
+tel: "2395 3155",
+cuisine: "Indian, Italian & Middle Eastern",
+expiryDate: "06-May-25",
+region: "Kowloon"
+},
+// New Territories restaurants
+{
+no: 1,
+name: "Cook & Cook",
+address: "Shop 7, G/F, Look Yuen, 6 Tsing Pak Path, Tuen Mun",
+tel: "9807 4401",
+cuisine: "Indian, Italian & Middle Eastern",
+expiryDate: "04-Dec-25",
+region: "New Territories"
+},
+{
+no: 2,
+name: "Delicaso",
+address: "Shop MK09, G/F, Fresh Central, Ping Yan Shopping Centre, 65 Ping Ha Road, Tin Shui Wai",
+tel: "94987010",
+cuisine: "Fast Food",
+expiryDate: "16-Dec-25",
+region: "New Territories"
+},
+{
+no: 3,
+name: "Ebeneezer's (Chinese University HK)",
+address: "G05 Li Wai Chun Building, The Chinese University of HK, Shatin.",
+tel: "2561 2081",
+cuisine: "Indian, Italian & Middle Eastern",
+expiryDate: "06-May-25",
+region: "New Territories"
+},
+{
+no: 4,
+name: "Ebeneezer's (HKUST)",
+address: "G044, G/F, Lee Shau Kee Business Building, LSK Campus, The Hong Kong University of Science & Technology, Clear Water Bay.",
+tel: "3188 5550",
+cuisine: "Indian, Italian & Middle Eastern",
+expiryDate: "06-May-25",
+region: "New Territories"
+},
+{
+no: 5,
+name: "Ebeneezer's (Tseung Kwan O)",
+address: "Shop 21, G/F, Papillions Square, 21 Tong Chun St, Tseung Kwan O.",
+tel: "2519 8555",
+cuisine: "Indian, Italian & Middle Eastern",
+expiryDate: "06-May-25",
+region: "New Territories"
+},
+// Lantau Island restaurants
+{
+no: 1,
+name: "AROMA",
+address: "97, Ma Wan Chung Village, Tung Chung, Lantau Island.",
+tel: "6859 0277",
+cuisine: "Indian",
+expiryDate: "17-Sep-25",
+region: "Lantau"
+},
+{
+no: 2,
+name: "Ebeneezer's (Discovery Bay)",
+address: "Shop 102A, 1/F Block A, Discovery Bay Plaza, Discovery Bay, Lantau.",
+tel: "2987 0036",
+cuisine: "Indian, Italian & Middle Eastern",
+expiryDate: "06-May-25",
+region: "Lantau"
+},
+{
+no: 3,
+name: "Ebeneezer's (Ngong Ping)",
+address: "Shop 9A, G/F, Ngong Ping Themed Village, Ngong Ping, Lantau Island.",
+tel: "2259 3988",
+cuisine: "Indian, Italian & Middle Eastern",
+expiryDate: "06-May-25",
+region: "Lantau"
+},
+// Airport restaurants
+{
+no: 1,
+name: "Old Town White Coffee",
+address: "6W564, West Hall, Airside, Terminal 1, Hong Kong International Airport, Lantau.",
+tel: "-",
+cuisine: "Southeast Asian",
+expiryDate: "30-Aug-25",
+region: "Airport"
+},
+{
+no: 2,
+name: "Plaza Premium Lounge",
+address: "Departures Level, Terminal 1, Hong Kong International Airport (near Gate 1).",
+tel: "3018 3078",
+cuisine: "International",
+expiryDate: "30-Aug-25",
+region: "Airport"
+},
+// Macau restaurants
+{
+no: 1,
+name: "Amaier Qinghai Yak Meat Noodles",
+address: "2B, Ground Floor and Mezzanine G, Sun Wan Building, No. 2, Kao Don Square, Macau.",
+tel: "+853 6611 0525",
+cuisine: "Noodles",
+expiryDate: "09-Jun-25",
+region: "Macau"
+},
+{
+no: 2,
+name: "Café Panorama - Grand Coloane Resort",
+address: "1918 Estrada de Hac Sa, Coloane, Macau SAR",
+tel: "+853 8899 1020",
+cuisine: "International",
+expiryDate: "28-Nov-25",
+region: "Macau"
+}
+];
+
+// Extract areas from addresses
+restaurants.forEach(restaurant => {
+const addressParts = restaurant.address.split(',');
+const lastPart = addressParts[addressParts.length - 1].trim();
+// Extract area from the last part of the address
+if (lastPart.endsWith('.')) {
+restaurant.area = lastPart.substring(0, lastPart.length - 1);
+} else {
+restaurant.area = lastPart;
+}
+
+// Handle common areas in Hong Kong Island
+if (restaurant.area.includes('Central')) restaurant.area = 'Central';
+if (restaurant.area.includes('Wan Chai') || restaurant.area.includes('Wanchai')) restaurant.area = 'Wan Chai';
+if (restaurant.area.includes('Causeway Bay')) restaurant.area = 'Causeway Bay';
+if (restaurant.area.includes('Tin Hau')) restaurant.area = 'Tin Hau';
+if (restaurant.area.includes('North Point')) restaurant.area = 'North Point';
+if (restaurant.area.includes('Sheung Wan')) restaurant.area = 'Sheung Wan';
+if (restaurant.area.includes('Sai Ying Pun')) restaurant.area = 'Sai Ying Pun';
+if (restaurant.area.includes('Kennedy Town')) restaurant.area = 'Kennedy Town';
+if (restaurant.area.includes('Tai Hang')) restaurant.area = 'Tai Hang';
+if (restaurant.area.includes('Quarry Bay')) restaurant.area = 'Quarry Bay';
+if (restaurant.area.includes('Chai Wan')) restaurant.area = 'Chai Wan';
+if (restaurant.area.includes('Stanley')) restaurant.area = 'Stanley';
+if (restaurant.area.includes('Ap Lei Chau')) restaurant.area = 'Ap Lei Chau';
+if (restaurant.area.includes('So Kon Po')) restaurant.area = 'So Kon Po';
+if (restaurant.area.includes('HKU')) restaurant.area = 'HKU';
+
+// Handle common areas in Kowloon
+if (restaurant.area.includes('Tsim Sha Tsui') || restaurant.area.includes('TST')) restaurant.area = 'Tsim Sha Tsui';
+if (restaurant.area.includes('Mong Kok')) restaurant.area = 'Mong Kok';
+if (restaurant.area.includes('Hung Hom')) restaurant.area = 'Hung Hom';
+if (restaurant.area.includes('Kwun Tong')) restaurant.area = 'Kwun Tong';
+if (restaurant.area.includes('Jordan')) restaurant.area = 'Jordan';
+if (restaurant.area.includes('Yau Ma Tei')) restaurant.area = 'Yau Ma Tei';
+if (restaurant.area.includes('Sham Shui Po')) restaurant.area = 'Sham Shui Po';
+
+// Handle common areas in New Territories
+if (restaurant.area.includes('Tuen Mun')) restaurant.area = 'Tuen Mun';
+if (restaurant.area.includes('Tin Shui Wai')) restaurant.area = 'Tin Shui Wai';
+if (restaurant.area.includes('Shatin') || restaurant.area.includes('Sha Tin')) restaurant.area = 'Sha Tin';
+if (restaurant.area.includes('Tseung Kwan O')) restaurant.area = 'Tseung Kwan O';
+if (restaurant.area.includes('Clear Water Bay')) restaurant.area = 'Clear Water Bay';
+
+// Handle common areas in Lantau
+if (restaurant.area.includes('Tung Chung')) restaurant.area = 'Tung Chung';
+if (restaurant.area.includes('Discovery Bay')) restaurant.area = 'Discovery Bay';
+if (restaurant.area.includes('Ngong Ping')) restaurant.area = 'Ngong Ping';
+
+// Handle areas for Airport, Macau
+if (restaurant.region === "Airport") restaurant.area = "Airport";
+if (restaurant.region === "Macau") {
+if (restaurant.address.includes("Taipa")) {
+restaurant.area = "Taipa";
+} else if (restaurant.address.includes("Coloane")) {
+restaurant.area = "Coloane";
+} else {
+restaurant.area = "Macau Peninsula";
+}
+}
+});
+
+// Add approximate coordinates for map view
+// These are approximate coordinates for different areas of Hong Kong
+const areaCoordinates = {
+// Hong Kong Island
+'Central': [22.2816, 114.1589],
+'Wan Chai': [22.2773, 114.1694],
+'Causeway Bay': [22.2829, 114.1837],
+'Tin Hau': [22.2829, 114.1919],
+'North Point': [22.2908, 114.1951],
+'Sheung Wan': [22.2867, 114.1492],
+'Sai Ying Pun': [22.2868, 114.1420],
+'Kennedy Town': [22.2840, 114.1277],
+'Tai Hang': [22.2789, 114.1919],
+'Quarry Bay': [22.2934, 114.2121],
+'Chai Wan': [22.2697, 114.2372],
+'Stanley': [22.2186, 114.2127],
+'Ap Lei Chau': [22.2433, 114.1552],
+'So Kon Po': [22.2747, 114.1882],
+'HKU': [22.2830, 114.1372],
+
+// Kowloon
+'Tsim Sha Tsui': [22.2988, 114.1722],
+'Mong Kok': [22.3201, 114.1698],
+'Hung Hom': [22.3034, 114.1811],
+'Kwun Tong': [22.3133, 114.2256],
+'Jordan': [22.3052, 114.1708],
+'Yau Ma Tei': [22.3126, 114.1707],
+'Sham Shui Po': [22.3310, 114.1622],
+'Kowloon City': [22.3317, 114.1902],
+'Kowloon Bay': [22.3235, 114.2140],
+'To Kwa Wan': [22.3185, 114.1903],
+'Tai Kok Tsui': [22.3224, 114.1632],
+
+// New Territories
+'Tuen Mun': [22.3911, 113.9677],
+'Tin Shui Wai': [22.4604, 114.0032],
+'Sha Tin': [22.3814, 114.1918],
+'Tseung Kwan O': [22.3157, 114.2656],
+'Clear Water Bay': [22.2960, 114.2881],
+'Yuen Long': [22.4425, 114.0231],
+'Tsing Yi': [22.3506, 114.1095],
+'Tsuen Wan': [22.3700, 114.1175],
+'Sai Kung': [22.3833, 114.2723],
+'Ma On Shan': [22.4237, 114.2316],
+
+// Lantau
+'Tung Chung': [22.2891, 113.9413],
+'Discovery Bay': [22.2977, 114.0162],
+'Ngong Ping': [22.2559, 113.9068],
+'Lantau Island': [22.2664, 113.9467],
+
+// Airport
+'Airport': [22.3080, 113.9184],
+
+// Macau
+'Macau Peninsula': [22.1987, 113.5439],
+'Taipa': [22.1559, 113.5590],
+'Coloane': [22.1244, 113.5605]
+};
+
+// Initialize map but don't show it yet
+let map;
+let markers = [];
+let markerCluster;
+
+function initMap() {
+if (map) return; // Only initialize once
+
+const mapContainer = document.getElementById('map-container');
+mapContainer.classList.remove('hidden');
+
+// Create map centered on Hong Kong
+map = L.map('map-container').setView([22.3193, 114.1694], 11);
+
+// Add the road-focused tile layer
+// Using Stadia Maps Alidade Smooth style which emphasizes roads while remaining within CSP constraints
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+maxZoom: 19,
+}).addTo(map);
+
+// Add markers for all restaurants with coordinates
+addMarkersToMap();
+
+// Force a resize to ensure map renders correctly
+setTimeout(() => {
+map.invalidateSize();
+}, 100);
+}
+
+function addMarkersToMap() {
+// Clear existing markers
+if (markers.length > 0) {
+markers.forEach(marker => map.removeLayer(marker));
+markers = [];
+}
+
+// Get currently filtered restaurants
+const filteredRestaurants = restaurants.filter(restaurant => {
+const matchesRegion = !selectedRegion || restaurant.region === selectedRegion;
+const matchesCuisine = !selectedCuisine || restaurant.cuisine.includes(selectedCuisine);
+const matchesArea = !selectedArea || restaurant.area === selectedArea;
+return matchesRegion && matchesCuisine && matchesArea;
+});
+
+// Add markers for filtered restaurants
+filteredRestaurants.forEach(restaurant => {
+// Get coordinates for the restaurant's area
+const coords = areaCoordinates[restaurant.area];
+
+if (coords) {
+// Add a small random offset to prevent markers from stacking exactly on top of each other
+const lat = coords[0] + (Math.random() - 0.5) * 0.003;
+const lng = coords[1] + (Math.random() - 0.5) * 0.003;
+
+// Create a colorful marker icon
+const bgColor = stringToColor(restaurant.name);
+const customIcon = L.divIcon({
+className: 'custom-div-icon',
+html: `<div style="background-color: ${bgColor}; width: 30px; height: 30px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">${getInitials(restaurant.name)}</div>`,
+iconSize: [30, 30],
+iconAnchor: [15, 15]
+});
+
+// Create marker with popup
+const marker = L.marker([lat, lng], {icon: customIcon}).addTo(map);
+
+// Create custom popup content
+const popupContent = `
+<div class="map-popup">
+<div class="map-popup-header">${restaurant.name}</div>
+<div style="color: #666; font-size: 0.9rem;">
+<div><strong>Cuisine:</strong> ${restaurant.cuisine}</div>
+<div><strong>Address:</strong> ${restaurant.address}</div>
+<div><strong>Phone:</strong> ${restaurant.tel}</div>
+<div><strong>Valid until:</strong> ${restaurant.expiryDate}</div>
+</div>
+</div>
+`;
+
+marker.bindPopup(popupContent);
+markers.push(marker);
+}
+});
+
+// Adjust map view to fit all markers if there are any
+if (markers.length > 0) {
+const group = new L.featureGroup(markers);
+map.fitBounds(group.getBounds().pad(0.1));
+}
+}
+
+// Extract unique cuisines for filters
+const cuisines = [...new Set(restaurants.map(r => r.cuisine))].sort();
+
+// Function to populate area filter based on selected region
+function updateAreaFilter(selectedRegion) {
+const areaFilter = document.getElementById('area-filter');
+
+// Get areas for the selected region
+const filteredAreas = selectedRegion
+? [...new Set(restaurants.filter(r => r.region === selectedRegion).map(r => r.area))].sort()
+: [...new Set(restaurants.map(r => r.area))].sort();
+
+// Clear existing options except the first one
+while (areaFilter.options.length > 1) {
+areaFilter.remove(1);
+}
+
+// Add new options
+filteredAreas.forEach(area => {
+const option = document.createElement('option');
+option.value = area;
+option.textContent = area;
+areaFilter.appendChild(option);
+});
+}
+
+// Populate cuisine filter
+const cuisineFilter = document.getElementById('cuisine-filter');
+cuisines.forEach(cuisine => {
+const option = document.createElement('option');
+option.value = cuisine;
+option.textContent = cuisine;
+cuisineFilter.appendChild(option);
+});
+
+// Initialize area filter with all areas
+updateAreaFilter('');
+
+// Sorting and filtering state
+let sortField = 'name';
+let sortDirection = 'asc';
+let selectedRegion = '';
+let selectedCuisine = '';
+let selectedArea = '';
+let currentView = 'list'; // 'list' or 'map'
+
+// Function to render restaurant list
+function renderRestaurants() {
+const restaurantList = document.getElementById('restaurant-list');
+const restaurantCount = document.getElementById('restaurant-count');
+
+// Filter restaurants
+let filteredRestaurants = restaurants.filter(restaurant => {
+const matchesRegion = !selectedRegion || restaurant.region === selectedRegion;
+const matchesCuisine = !selectedCuisine || restaurant.cuisine.includes(selectedCuisine);
+const matchesArea = !selectedArea || restaurant.area === selectedArea;
+return matchesRegion && matchesCuisine && matchesArea;
+});
+
+// Sort restaurants
+filteredRestaurants.sort((a, b) => {
+let valueA, valueB;
+
+if (sortField === 'name') {
+valueA = a.name.toLowerCase();
+valueB = b.name.toLowerCase();
+} else if (sortField === 'cuisine') {
+valueA = a.cuisine.toLowerCase();
+valueB = b.cuisine.toLowerCase();
+} else if (sortField === 'area') {
+valueA = a.area.toLowerCase();
+valueB = b.area.toLowerCase();
+} else if (sortField === 'region') {
+valueA = a.region;
+valueB = b.region;
+} else if (sortField === 'expiry') {
+// Convert DD-MMM-YY to a sortable format
+const datePartsA = a.expiryDate.split('-');
+const datePartsB = b.expiryDate.split('-');
+
+// Convert month names to numbers
+const monthMap = {
+'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+};
+
+// Create date objects
+const dateA = new Date(2000 + parseInt(datePartsA[2]), monthMap[datePartsA[1]], parseInt(datePartsA[0]));
+const dateB = new Date(2000 + parseInt(datePartsB[2]), monthMap[datePartsB[1]], parseInt(datePartsB[0]));
+
+valueA = dateA;
+valueB = dateB;
+}
+
+if (sortDirection === 'asc') {
+return valueA > valueB ? 1 : -1;
+} else {
+return valueA < valueB ? 1 : -1;
+}
+});
+
+// Update count
+restaurantCount.textContent = `Found ${filteredRestaurants.length} restaurant${filteredRestaurants.length !== 1 ? 's' : ''}`;
+
+// If in map view, update the markers
+if (currentView === 'map' && map) {
+addMarkersToMap();
+return; // Don't update the list view if we're in map view
+}
+
+// Clear previous list
+restaurantList.innerHTML = '';
+
+// Render restaurants
+filteredRestaurants.forEach((restaurant, index) => {
+// Generate image placeholder based on restaurant name
+const initials = getInitials(restaurant.name);
+const bgColor = stringToColor(restaurant.name);
+
+const card = document.createElement('div');
+card.className = 'restaurant-card bg-white dark:bg-gray-800 p-4 rounded-lg shadow transition-all hover:shadow-md fade-in';
+card.style.animationDelay = `${index * 0.05}s`;
+
+card.innerHTML = `
+<div class="flex flex-col md:flex-row gap-4">
+<div class="md:w-1/5 mb-3 md:mb-0">
+<div class="placeholder-image" style="background-color: ${bgColor};">
+<span class="text-2xl">${initials}</span>
+</div>
+</div>
+<div class="md:w-2/5">
+<h3 class="text-xl font-semibold text-primary">${restaurant.name}</h3>
+<div class="flex flex-wrap gap-2 mb-2">
+<span class="text-sm text-gray-500 dark:text-gray-400">${restaurant.region}</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">• ${restaurant.area}</span>
+</div>
+<p class="mb-1"><span class="font-medium">Cuisine:</span> ${restaurant.cuisine}</p>
+<p class="mb-1 text-sm"><span class="font-medium">Address:</span> ${restaurant.address}</p>
+<p class="mb-1"><span class="font-medium">Phone:</span> ${restaurant.tel}</p>
+</div>
+<div class="md:w-2/5 mt-3 md:mt-0 md:text-right flex flex-col justify-between">
+<span class="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 px-3 py-1 rounded-full text-sm self-start md:self-end">
+Valid until: ${restaurant.expiryDate}
+</span>
+</div>
+</div>
+`;
+
+restaurantList.appendChild(card);
+});
+}
+
+// Toggle between list and map views
+function setView(view) {
+currentView = view;
+const listViewBtn = document.getElementById('list-view-btn');
+const mapViewBtn = document.getElementById('map-view-btn');
+const restaurantList = document.getElementById('restaurant-list');
+const mapContainer = document.getElementById('map-container');
+
+if (view === 'list') {
+// Switch to list view
+listViewBtn.classList.add('active');
+mapViewBtn.classList.remove('active');
+restaurantList.classList.remove('hidden');
+mapContainer.classList.add('hidden');
+renderRestaurants();
+} else {
+// Switch to map view
+listViewBtn.classList.remove('active');
+mapViewBtn.classList.add('active');
+restaurantList.classList.add('hidden');
+mapContainer.classList.remove('hidden');
+
+// Initialize map if it hasn't been already
+initMap();
+
+// Update map with current filtered restaurants
+addMarkersToMap();
+
+// Force a resize to ensure map renders correctly
+setTimeout(() => {
+map.invalidateSize();
+}, 100);
+}
+}
+
+// Event listeners for filters and sort
+document.getElementById('region-filter').addEventListener('change', (e) => {
+selectedRegion = e.target.value;
+updateAreaFilter(selectedRegion);
+selectedArea = ''; // Reset area selection when region changes
+document.getElementById('area-filter').value = '';
+renderRestaurants();
+});
+
+document.getElementById('cuisine-filter').addEventListener('change', (e) => {
+selectedCuisine = e.target.value;
+renderRestaurants();
+});
+
+document.getElementById('area-filter').addEventListener('change', (e) => {
+selectedArea = e.target.value;
+renderRestaurants();
+});
+
+document.getElementById('sort-option').addEventListener('change', (e) => {
+sortField = e.target.value;
+renderRestaurants();
+});
+
+document.getElementById('sort-direction').addEventListener('click', () => {
+sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+const button = document.getElementById('sort-direction');
+button.innerHTML = `
+<span>${sortDirection === 'asc' ? 'Ascending' : 'Descending'}</span>
+<svg xmlns="http://www.w3.org/2000/svg" class="ml-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+<path fill-rule="evenodd" d="${sortDirection === 'asc'
+? 'M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z'
+: 'M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l2.293-2.293a1 1 0 011.414 0z'}" clip-rule="evenodd" />
+</svg>
+`;
+renderRestaurants();
+});
+
+// View toggle event listeners
+document.getElementById('list-view-btn').addEventListener('click', () => setView('list'));
+document.getElementById('map-view-btn').addEventListener('click', () => setView('map'));
+
+// Initial render
+renderRestaurants();
+</script>
+</body>
+</html>
