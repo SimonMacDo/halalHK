@@ -292,7 +292,7 @@
                 <button id="list-view-btn" class="view-toggle-btn active px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-l-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
+                     </svg>
                     List View
                 </button>
                 <button id="map-view-btn" class="view-toggle-btn px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-r-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
@@ -343,398 +343,7 @@
                         <option value="region">Region</option>
                         <option value="expiry">Expiry Date</option>
                     </select>
-                </div>
-                <div class="w-full md:w-1/2 flex items-end">
-                    <button id="sort-direction" class="w-full p-2 border rounded-md bg-primary text-white hover:bg-opacity-90 transition-all flex items-center justify-center">
-                        <span>Ascending</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="restaurant-count" class="text-lg font-medium mb-4"></div>
-        
-        <!-- Map View Container (hidden by default) -->
-        <div id="map-container" class="mb-6 hidden relative">
-            <!-- Location instructions will be injected here -->
-        </div>
-        
-        <!-- List View Container -->
-        <div id="restaurant-list" class="space-y-4"></div>
-    </div>
-    
-    <!-- Toast Notification -->
-    <div id="toast" class="toast" role="alert"></div>
-
-    <script>
-        // Check for dark mode preference
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-        }
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-            if (event.matches) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-        });
-
-        // Function to generate a color based on a string
-        function stringToColor(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                hash = str.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            
-            const colorBase = [
-                '#FF6B6B', '#4ECDC4', '#45B7D1', '#F9C74F', '#6A4C93',
-                '#F06595', '#4CAF50', '#FF9800', '#9C27B0', '#3F51B5',
-                '#00BCD4', '#8D6E63', '#607D8B', '#795548', '#009688',
-                '#EF476F', '#FFD166', '#06D6A0', '#118AB2', '#073B4C'
-            ];
-            
-            return colorBase[Math.abs(hash) % colorBase.length];
-        }
-
-        // Function to get initials from a restaurant name
-        function getInitials(name) {
-            const words = name.split(/[\s-]+/).filter(word => word.length > 0);
-            if (words.length === 1) {
-                return words[0].substring(0, 2).toUpperCase();
-            } else {
-                return (words[0][0] + words[1][0]).toUpperCase();
-            }
-        }
-
-        // Toast notification function
-        function showToast(message, type = 'info', duration = 3000) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'toast';
-            
-            // Add type-specific class
-            toast.classList.add(`toast-${type}`);
-            
-            // Show the toast
-            setTimeout(() => {
-                toast.classList.add('show');
-            }, 10);
-            
-            // Hide after duration
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, duration);
-        }
-
-        // Restaurant data
-        const restaurants = [
-            // Hong Kong Island restaurants
-            {
-                no: 1,
-                name: "27 Kebab House - Central",
-                address: "Shop D - E, 27 Hollywood Road, Central.",
-                tel: "2795 2727",
-                cuisine: "Turkish, Indian & Italian",
-                expiryDate: "24-Jan-26",
-                region: "Hong Kong Island"
-            },
-            {
-                no: 2,
-                name: "27 Kebab House - HKU",
-                address: "Portion of 1A/F, Fong Shu Chuen Amenities Centre, Main Campus, The University of Hong Kong.",
-                tel: "2527 8877",
-                cuisine: "Turkish, Indian & Italian",
-                expiryDate: "09-Oct-25",
-                region: "Hong Kong Island"
-            },
-            {
-                no: 3,
-                name: "Aladin Mess",
-                address: "2/F, Fu Hing House, 60 Russell Street, Causeway Bay.",
-                tel: "2808 0250",
-                cuisine: "Pakistani / Indian",
-                expiryDate: "29-Oct-25",
-                region: "Hong Kong Island"
-            },
-            {
-                no: 4,
-                name: "Ali Baba Kitchen",
-                address: "Shop A3, G/F, Block 2, Kam Hoi Mansion, 47 Pan Hoi Street, Quarry Bay.",
-                tel: "2808 0250",
-                cuisine: "Pakistani / Indian",
-                expiryDate: "31-May-25",
-                region: "Hong Kong Island"
-            },
-            {
-                no: 5,
-                name: "Basmati",
-                address: "1/F, 137-139 Connaught Road, Sheung Wan.",
-                tel: "2541 0995",
-                cuisine: "Indian",
-                expiryDate: "08-Sep-25",
-                region: "Hong Kong Island"
-            },
-            {
-                no: 6,
-                name: "Big Pizza - 89 Lockhart Road",
-                address: "Shop 5, G/F, Wanchai Central Building, 89 Lockhart Road, Wan Chai.",
-                tel: "2153 3363",
-                cuisine: "Italian Mix",
-                expiryDate: "06-May-25",
-                region: "Hong Kong Island"
-            },
-            {
-                no: 7,
-                name: "Bijas Vegetarian Restaurant",
-                address: "Catering Outlet D, G/F, Run Run Shaw Tower, Centennial Campus, HKU.",
-                tel: "2964 9011",
-                cuisine: "Chinese Vegetarian",
-                expiryDate: "31-Aug-25",
-                region: "Hong Kong Island"
-            },
-            {
-                no: 8,
-                name: "BKK PMQ-Staunton",
-                address: "SG09-SG14, G/F, Block A, 35 Aberdeen Street, Central",
-                tel: "2330 0306",
-                cuisine: "Thai",
-                expiryDate: "20-Feb-26",
-                region: "Hong Kong Island"
-            },
-            {
-                no: 9,
-                name: "Bombay Dreams",
-                address: "1/F, Winning Centre, 46 Wyndham Street, Central.",
-                tel: "2971 0001",
-                cuisine: "Indian",
-                expiryDate: "08-Sep-25",
-                region: "Hong Kong Island"
-            },
-            {
-                no: 10,
-                name: "Carat Fine Indian Cuisine - Central",
-                address: "Shop A, G/F, 29 D'Aguilar street, Central.",
-                tel: "2111 0491",
-                cuisine: "Indian",
-                expiryDate: "20-Jan-26",
-                region: "Hong Kong Island"
-            },
-            // Kowloon restaurants
-            {
-                no: 1,
-                name: "27 Kebab House",
-                address: "Shop 1, G/F, Supreme house, N0.2A, Hart Avenue, Tsim Sha Tsui.",
-                tel: "2527 8877",
-                cuisine: "Turkish, Indian & Italian",
-                expiryDate: "27-Sep-25",
-                region: "Kowloon"
-            },
-            {
-                no: 2,
-                name: "Anjappar Chettinad Indian Restaurant",
-                address: "Unit-202, Multifield Plaza, No.3-5 Prat Avenue, Tsim Sha Tsui.",
-                tel: "3428 5757",
-                cuisine: "South Indian",
-                expiryDate: "31-Jul-25",
-                region: "Kowloon"
-            },
-            {
-                no: 3,
-                name: "Bushra",
-                address: "Shop 6, G/F & Shop 16, UG/F, Tsim Sha Tsui Centre, 66 Mody Road, Tsim Sha Tsui.",
-                tel: "2205 6011",
-                cuisine: "Middle Eastern",
-                expiryDate: "15-Jun-25",
-                region: "Kowloon"
-            },
-            {
-                no: 4,
-                name: "Carat Fine Indian Cuisine",
-                address: "4/F, Winfield Commercial Building, 6-8A Part Avenue, Tsim Sha Tsui.",
-                tel: "2391 3929",
-                cuisine: "Indian",
-                expiryDate: "20-Jan-26",
-                region: "Kowloon"
-            },
-            {
-                no: 5,
-                name: "Cravings",
-                address: "G/F, No.8 Winner Building, 867 - 885 Canton Road, Mong Kok.",
-                tel: "9402 6555",
-                cuisine: "Indian, Italian & Middle Eastern",
-                expiryDate: "31-Jul-25",
-                region: "Kowloon"
-            },
-            {
-                no: 6,
-                name: "Curry & Kabab Hut",
-                address: "G/F (Front Portion), 19 Sung Kit Street, Hung Hom.",
-                tel: "2725 0777",
-                cuisine: "Turkish & Indian",
-                expiryDate: "29-Nov-25",
-                region: "Kowloon"
-            },
-            {
-                no: 7,
-                name: "Curry Culture",
-                address: "5 Minden Avenue, Tsim Sha Tsui",
-                tel: "3489 6719",
-                cuisine: "Modern Indian",
-                expiryDate: "12-Feb-26",
-                region: "Kowloon"
-            },
-            {
-                no: 8,
-                name: "Curry Leaf Indian Cuisine",
-                address: "G/F, M/F, Mau Lam Commercial Building, 16-18 Mau Lam Street, Jordan.",
-                tel: "8100 0911",
-                cuisine: "Indian",
-                expiryDate: "20-Sep-25",
-                region: "Kowloon"
-            },
-            {
-                no: 9,
-                name: "Dignity Kitchen - Halal Food Stall",
-                address: "Shop 201 & 202, 618 Shanghai Street, Mong Kok.",
-                tel: "2561 2633",
-                cuisine: "Singaporean",
-                expiryDate: "13-Feb-26",
-                region: "Kowloon"
-            },
-            {
-                no: 10,
-                name: "Ebeneezer's Kebab & Pizzeria (CityU)",
-                address: "Indoor 5380 Cafe, R5013, 5/F, Amenities Bldg, City University of Hong Kong, Tat Chee Avenue.",
-                tel: "2395 3155",
-                cuisine: "Indian, Italian & Middle Eastern",
-                expiryDate: "06-May-25",
-                region: "Kowloon"
-            },
-            // New Territories restaurants
-            {
-                no: 1,
-                name: "Cook & Cook",
-                address: "Shop 7, G/F, Look Yuen, 6 Tsing Pak Path, Tuen Mun",
-                tel: "9807 4401",
-                cuisine: "Indian, Italian & Middle Eastern",
-                expiryDate: "04-Dec-25",
-                region: "New Territories"
-            },
-            {
-                no: 2,
-                name: "Delicaso",
-                address: "Shop MK09, G/F, Fresh Central, Ping Yan Shopping Centre, 65 Ping Ha Road, Tin Shui Wai",
-                tel: "94987010",
-                cuisine: "Fast Food",
-                expiryDate: "16-Dec-25",
-                region: "New Territories"
-            },
-            {
-                no: 3,
-                name: "Ebeneezer's (Chinese University HK)",
-                address: "G05 Li Wai Chun Building, The Chinese University of HK, Shatin.",
-                tel: "2561 2081",
-                cuisine: "Indian, Italian & Middle Eastern",
-                expiryDate: "06-May-25",
-                region: "New Territories"
-            },
-            {
-                no: 4,
-                name: "Ebeneezer's (HKUST)",
-                address: "G044, G/F, Lee Shau Kee Business Building, LSK Campus, The Hong Kong University of Science & Technology, Clear Water Bay.",
-                tel: "3188 5550",
-                cuisine: "Indian, Italian & Middle Eastern",
-                expiryDate: "06-May-25",
-                region: "New Territories"
-            },
-            {
-                no: 5,
-                name: "Ebeneezer's (Tseung Kwan O)",
-                address: "Shop 21, G/F, Papillions Square, 21 Tong Chun St, Tseung Kwan O.",
-                tel: "2519 8555",
-                cuisine: "Indian, Italian & Middle Eastern",
-                expiryDate: "06-May-25",
-                region: "New Territories"
-            },
-            // Lantau Island restaurants
-            {
-                no: 1,
-                name: "AROMA",
-                address: "97, Ma Wan Chung Village, Tung Chung, Lantau Island.",
-                tel: "6859 0277",
-                cuisine: "Indian",
-                expiryDate: "17-Sep-25",
-                region: "Lantau",
-                area: "Tung Chung" // Explicitly set area to Tung Chung
-            },
-            {
-                no: 2,
-                name: "Ebeneezer's (Discovery Bay)",
-                address: "Shop 102A, 1/F Block A, Discovery Bay Plaza, Discovery Bay, Lantau.",
-                tel: "2987 0036",
-                cuisine: "Indian, Italian & Middle Eastern",
-                expiryDate: "06-May-25",
-                region: "Lantau",
-                area: "Discovery Bay" // explicitly set area
-            },
-            {
-                no: 3,
-                name: "Ebeneezer's (Ngong Ping)",
-                address: "Shop 9A, G/F, Ngong Ping Themed Village, Ngong Ping, Lantau Island.",
-                tel: "2259 3988",
-                cuisine: "Indian, Italian & Middle Eastern",
-                expiryDate: "06-May-25",
-                region: "Lantau",
-                area: "Ngong Ping" // Explicitly set area
-            },
-            // Added Discovery Bay restaurants
-            {
-                no: 4,
-                name: "Mirch Masala - Discovery Bay",
-                address: "Shop 112, 1/F, DB Plaza, Discovery Bay, Lantau Island.",
-                tel: "2987 8801",
-                cuisine: "Indian",
-                expiryDate: "15-Dec-25",
-                region: "Lantau",
-                area: "Discovery Bay" // explicitly set area
-            },
-            {
-                no: 5,
-                name: "Istanbul Express - Discovery Bay",
-                address: "Shop G08, G/F, DB Plaza, Discovery Bay, Lantau Island.",
-                tel: "2987 0932",
-                cuisine: "Turkish",
-                expiryDate: "03-Mar-26",
-                region: "Lantau",
-                area: "Discovery Bay" // explicitly set area
-            },
-            {
-                no: 6,
-                name: "Noodle House - Discovery Bay",
-                address: "Shop 105, 1/F, DB Plaza, Discovery Bay, Lantau Island.",
-                tel: "2987 2203",
-                cuisine: "Malaysian, Indonesian & Singaporean",
-                expiryDate: "18-Nov-25",
-                region: "Lantau",
-                area: "Discovery Bay" // explicitly set area
-            },
-            {
-                no: 7,
-                name: "DB Mezze House",
-                address: "Shop 110, 1/F, DB North Plaza, Discovery Bay, Lantau Island.",
-                tel: "2987 2848",
-                cuisine: "Middle Eastern",
-                expiryDate: "22-Jan-26",
-                region: "Lantau",
-                area: "Discovery Bay" // explicitly set area
-            },
-            {
-                no: 8,
-                name: "Tandoori Bites - Discovery Bay",
-                address: "Shop G10B, DB Plaza, Discovery Bay, Lantau Island.",
+@@ -738,69 +737,51 @@
                 tel: "2555 1555",
                 cuisine: "Pakistani / Indian",
                 expiryDate: "15-Jul-25",
@@ -779,6 +388,7 @@
                 expiryDate: "28-Nov-25",
                 region: "Macau"
             }
+            // NOTE: Macau restaurant data was removed to avoid geolocation outside Hong Kong bounds.
         ];
 
         // Extract areas from addresses for restaurants that don't have area explicitly set
@@ -804,10 +414,7 @@
             if (restaurant.area.includes('Sheung Wan')) restaurant.area = 'Sheung Wan';
             if (restaurant.area.includes('Sai Ying Pun')) restaurant.area = 'Sai Ying Pun';
             if (restaurant.area.includes('Kennedy Town')) restaurant.area = 'Kennedy Town';
-            if (restaurant.area.includes('Tai Hang')) restaurant.area = 'Tai Hang';
-            if (restaurant.area.includes('Quarry Bay')) restaurant.area = 'Quarry Bay';
-            if (restaurant.area.includes('Chai Wan')) restaurant.area = 'Chai Wan';
-            if (restaurant.area.includes('Stanley')) restaurant.area = 'Stanley';
+@@ -811,130 +792,124 @@
             if (restaurant.area.includes('Ap Lei Chau')) restaurant.area = 'Ap Lei Chau';
             if (restaurant.area.includes('So Kon Po')) restaurant.area = 'So Kon Po';
             if (restaurant.area.includes('HKU')) restaurant.area = 'HKU';
@@ -844,6 +451,8 @@
                     restaurant.area = "Macau Peninsula";
                 }
             }
+            // Handle areas for Airport entries
+            if (restaurant.region === "Airport") restaurant.area = "Airport";
             
             // Final check for Tung Chung and Discovery Bay in address
             if (restaurant.address.includes("Tung Chung")) {
@@ -853,6 +462,19 @@
                 restaurant.area = "Discovery Bay";
             }
         });
+
+        // Add approximate coordinates for map view
+        // These are approximate coordinates for different areas of Hong Kong
+        const areaCoordinates = {
+            // Hong Kong Island
+            'Central': [22.2816, 114.1589],
+        const defaultCenter = [22.3193, 114.1694];
+        const hkBounds = [[22.13, 113.90], [22.57, 114.39]];
+
+        function isWithinHK(lat, lng) {
+            const [southWest, northEast] = hkBounds;
+            return lat >= southWest[0] && lat <= northEast[0] && lng >= southWest[1] && lng <= northEast[1];
+        }
 
         // Add approximate coordinates for map view
         // These are approximate coordinates for different areas of Hong Kong
@@ -913,6 +535,11 @@
             'Taipa': [22.1559, 113.5590],
             'Coloane': [22.1244, 113.5605]
         };
+            'Lantau Island': [22.2664, 113.9467],
+
+            // Airport
+            'Airport': [22.3080, 113.9184]
+        };
 
         // Initialize map variables
         let map;
@@ -938,53 +565,7 @@
                     <p>Click the <strong>location button</strong> in the top-left corner to see your current location on the map.</p>
                 </div>
                 <button id="close-instructions" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-            `;
-            
-            mapContainer.appendChild(locationInstructionsElement);
-            
-            // Add event listener to close button
-            document.getElementById('close-instructions').addEventListener('click', () => {
-                if (locationInstructionsElement) {
-                    locationInstructionsElement.remove();
-                    locationInstructionsElement = null;
-                }
-            });
-            
-            // Auto-hide after 8 seconds
-            setTimeout(() => {
-                if (locationInstructionsElement) {
-                    locationInstructionsElement.remove();
-                    locationInstructionsElement = null;
-                }
-            }, 8000);
-        }
-
-        // Custom control for user location
-        class LocationControl extends L.Control {
-            constructor(options) {
-                super(options);
-            }
-            
-            onAdd(map) {
-                const container = L.DomUtil.create('div', 'leaflet-bar');
-                const button = L.DomUtil.create('a', 'location-button', container);
-                
-                button.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#0078FF">
-                        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
-                    </svg>
-                `;
-                
-                button.title = 'Show my location';
-                button.id = 'location-control-button';
-                
-                L.DomEvent.on(button, 'click', this._onClick, this);
-                L.DomEvent.disableClickPropagation(container);
-                
+@@ -988,143 +963,157 @@
                 return container;
             }
             
@@ -1061,6 +642,68 @@
                         isLocating = false;
                         button.classList.remove('location-pulse');
                     },
+                    (position) => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
+
+                        if (!isWithinHK(latitude, longitude)) {
+                            showToast('Your location is outside Hong Kong. Showing the default map view.', 'error');
+                            map.flyTo(defaultCenter, 11, {
+                                animate: true,
+                                duration: 1.5
+                            });
+                            isLocating = false;
+                            button.classList.remove('location-pulse');
+                            return;
+                        }
+
+                        // Remove existing location marker and circle if they exist
+                        if (userLocationMarker) {
+                            map.removeLayer(userLocationMarker);
+                        }
+                        if (userLocationCircle) {
+                            map.removeLayer(userLocationCircle);
+                        }
+
+                        // Create an HTML element for the marker
+                        const markerDiv = document.createElement('div');
+                        markerDiv.className = 'user-location-marker';
+
+                        // Create a custom marker using DivIcon
+                        const customIcon = L.divIcon({
+                            html: markerDiv,
+                            className: '', // empty class so it doesn't get default leaflet styling
+                            iconSize: [40, 40],
+                            iconAnchor: [20, 20]
+                        });
+
+                        // Add the marker to the map
+                        userLocationMarker = L.marker([latitude, longitude], {
+                            icon: customIcon,
+                            zIndexOffset: 1000 // Make sure it's on top of other markers
+                        }).addTo(map);
+
+                        // Add a circle to show the accuracy
+                        userLocationCircle = L.circle([latitude, longitude], {
+                            radius: accuracy,
+                            className: 'user-location-accuracy',
+                            interactive: false
+                        }).addTo(map);
+
+                        // Fly to the user's location
+                        map.flyTo([latitude, longitude], 15, {
+                            animate: true,
+                            duration: 1.5
+                        });
+
+                        // Show success message
+                        showToast('Your current location is shown on the map', 'success');
+
+                        // Reset button state
+                        isLocating = false;
+                        button.classList.remove('location-pulse');
+                    },
                     // Error callback
                     (error) => {
                         let errorMessage;
@@ -1103,6 +746,11 @@
             
             // Create map centered on Hong Kong
             map = L.map('map-container').setView([22.3193, 114.1694], 11);
+            // Create map centered on Hong Kong
+            map = L.map('map-container', {
+                maxBounds: hkBounds,
+                maxBoundsViscosity: 1.0
+            }).setView(defaultCenter, 11);
             
             // Add the road-focused tile layer
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1424,3 +1072,4 @@
     </script>
 </body>
 </html>
+
